@@ -50,6 +50,7 @@ dfps_test = [dfp for dfp in dfps_test if dfp.split('/')[-1].split('-')[0] in com
 train_df = pd.concat([pd.read_csv(dfp) for dfp in dfps_train], ignore_index=True)
 test_df = pd.concat([pd.read_csv(dfp) for dfp in dfps_test], ignore_index=True)
 
+
 #print(train_df.shape, test_df.shape)
 
 # Map the labels to the same format
@@ -119,6 +120,13 @@ single_val_cols
 train_df.drop(single_val_cols, axis=1, inplace = True)
 test_df.drop(single_val_cols, axis=1, inplace = True)
 
+#Remove object variables
+
+colunas_nao_usadas = ['Unnamed: 0', 'Flow ID', ' Source IP', ' Source Port', 
+                      ' Destination IP', ' Destination Port','SimillarHTTP', ' Timestamp']
+train_df = train_df.drop(columns=[col for col in colunas_nao_usadas if col in train_df.columns])
+test_df = test_df.drop(columns=[col for col in colunas_nao_usadas if col in test_df.columns])
+
 # Shape of the dataset after removing columns with a single unique value
 print(train_df.shape, test_df.shape)
 
@@ -136,24 +144,21 @@ upper_triangle = corr_matrix.where(mask)
 
 # Find the columns with correlation of 0.8 or higher
 high_corr_cols = [col for col in upper_triangle.columns if any(upper_triangle[col] > 0.8)]
-colunas_nao_usadas = ['Unnamed: 0', 'Flow ID', 'Source IP', 'Source Port', 
-                      'Destination IP', 'Destination Port']
-train_df.drop(columns=[col for col in colunas_nao_usadas if col in train_df.columns])
-test_df.drop(columns=[col for col in colunas_nao_usadas if col in test_df.columns])
-
-
 
 train_df.drop(high_corr_cols, axis=1, inplace=True)
 test_df.drop(high_corr_cols, axis=1, inplace=True)
 
-print(train_df.shape, test_df.shape)
+# 3. Tratar inf/NaN
+train_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+test_df.replace([np.inf, -np.inf], np.nan, inplace=True)
+train_df.fillna(0, inplace=True)
+test_df.fillna(0, inplace=True)
+
 
 
 X_train, X_val, y_train, y_val = train_test_split(train_df.drop(" Label", axis=1), train_df[" Label"], test_size=0.2, random_state=42)
 X_test, y_test = test_df.drop(" Label", axis=1), test_df[" Label"]
 
-print(X_train.shape, X_val.shape, X_test.shape)
-print(y_train.shape, y_val.shape, y_test.shape)
 
 le = LabelEncoder()
 y_train = le.fit_transform(y_train)
@@ -163,7 +168,6 @@ y_test = le.transform(y_test)
 # Label mapping for the target variable
 label_map = {index: Label for index, Label in enumerate(le.classes_)}
 
-print(label_map)
 
 # Feature Scaling using MinMaxScaler
 scaler = MinMaxScaler()
@@ -171,6 +175,7 @@ X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
+""" 
 # Train and evaluate models
 def train_model(X_train, X_test, y_train, y_test):
     # Initialize models
@@ -236,3 +241,4 @@ def train_model(X_train, X_test, y_train, y_test):
 # Run the function
 scores = train_model(X_train, X_val, y_train, y_val)
 print("Testing Scores between different models:")
+ """
