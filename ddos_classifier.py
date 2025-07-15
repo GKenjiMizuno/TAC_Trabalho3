@@ -175,8 +175,27 @@ X_train = scaler.fit_transform(X_train)
 X_val = scaler.transform(X_val)
 X_test = scaler.transform(X_test)
 
-""" 
-# Train and evaluate models
+import numpy as np
+
+print("Tem NaN em X_train?", np.isnan(X_train).sum())
+print("Tem +Inf em X_train?", np.isposinf(X_train).sum())
+print("Tem -Inf em X_train?", np.isneginf(X_train).sum())
+
+print("Tem NaN em X_val?", np.isnan(X_val).sum())
+print("Tem +Inf em X_val?", np.isposinf(X_val).sum())
+print("Tem -Inf em X_val?", np.isneginf(X_val).sum())
+
+print("Máximo absoluto X_train:", np.max(np.abs(X_train)))
+print("Máximo absoluto X_val:", np.max(np.abs(X_val)))
+
+print("Tipo X_train:", type(X_train), "dtype:", X_train.dtype)
+print("Tipo X_val:", type(X_val), "dtype:", X_val.dtype)
+
+print("Tipos das colunas em X antes do scaler:")
+print(train_df.dtypes)
+
+
+""" # Train and evaluate models
 def train_model(X_train, X_test, y_train, y_test):
     # Initialize models
     classifiers = {
