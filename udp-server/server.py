@@ -41,12 +41,11 @@ while True:
             "count": contador_total
         }
 
-        print("→ DEBUG | Entrada modelo:", amostra)
 
         entrada_modelo = pd.DataFrame([amostra])
         predicao = modelo.predict(entrada_modelo)[0]
         
-        label = "🟢 BENIGNO" if predicao == 0 else "🔴 ATAQUE"
+        label = "🟢 BENIGNO" if predicao == 1 else "🔴 ATAQUE"
         print(f"[{agora}] {label} | {ip_origem}:{addr[1]} → \"{msg}\" ({tam} bytes)")
 
     except UnicodeDecodeError:
