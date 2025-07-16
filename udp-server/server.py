@@ -21,26 +21,31 @@ while True:
     agora = datetime.now().strftime("%H:%M:%S.%f")[:-3]
     tam = len(data)
 
-    ip_origem = addr[0]
-    contador_total += 1
-    contador_por_ip[ip_origem] = contador_por_ip.get(ip_origem, 0) + 1
-
     try:
-        # Tentamos decodificar como mensagem legível
         msg = data.decode()
+        # Detecta o IP de origem real do payload, se você embutir no payload (ex: "Hello|10.0.0.101")
+        partes = msg.split("|")
+        if len(partes) == 2:
+            msg, ip_origem = partes[0], partes[1]
+        else:
+            ip_origem = addr[0]  # fallback
+        contador_total += 1
+        contador_por_ip[ip_origem] = contador_por_ip.get(ip_origem, 0) + 1
 
         # Simula extração de features reais (substitua por análise de payload real)
         amostra = {
             "dst_bytes": tam,
-            "service": 0.0,  # você pode usar um map de serviços reais (e.g. DNS, NTP)
+            "service": 0.1,  # você pode usar um map de serviços reais (e.g. DNS, NTP)
             "src_bytes": len(msg.encode()),
             "dst_host_srv_count": contador_por_ip[ip_origem],
             "count": contador_total
         }
 
+        print("→ DEBUG | Entrada modelo:", amostra)
+
         entrada_modelo = pd.DataFrame([amostra])
         predicao = modelo.predict(entrada_modelo)[0]
-
+        
         label = "🟢 BENIGNO" if predicao == 0 else "🔴 ATAQUE"
         print(f"[{agora}] {label} | {ip_origem}:{addr[1]} → \"{msg}\" ({tam} bytes)")
 
