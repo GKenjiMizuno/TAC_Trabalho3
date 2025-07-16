@@ -55,3 +55,6 @@ docker-compose up server attacker
 ```bash
 docker-compose down
 ```
+docker-compose down --remove-orphans
+docker-compose build --no-cache
+docker-compose up --force-recreate

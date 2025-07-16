@@ -1,19 +1,26 @@
 import socket
 import time
+import random
 
-server_ip = "server"
-port = 12345
+server_ip = "server"         # nome do container alvo (resolve na rede Docker)
+server_port = 12345          # porta usada pelo servidor UDP
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-print("Enviando pacotes UDP benignos...")
-
 mensagens = [
-    b"Ping 1",
-    b"Ping 2",
-    b"Ping 3",
-    b"Ultimo pacote"
+    b"Hello",
+    b"Ping",
+    b"Request",
+    b"Check",
+    b"KeepAlive"
 ]
 
-for msg in mensagens:
-    sock.sendto(msg, (server_ip, port))
-    time.sleep(2)  # Aguarda 2 segundos entre pacotes
+print("Iniciando tráfego UDP benigno...")
+
+for _ in range(20):
+    msg = random.choice(mensagens)
+    sock.sendto(msg, (server_ip, server_port))
+    print(f"Enviado: {msg}")
+    time.sleep(random.uniform(0.5, 2))
+
+print("Tráfego benigno finalizado.")
