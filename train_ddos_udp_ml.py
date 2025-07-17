@@ -1,66 +1,79 @@
-# Training data
 import numpy as np
 import pandas as pd
 import sys
 import pickle
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.model_selection import train_test_split
 
-df = pd.read_csv("./Datasets/revised_kddcup_dataset.csv",index_col=0)
-
-
+# Carrega dataset
+df = pd.read_csv("./revised_kddcup_dataset.csv", index_col=0)
 
 def train_udp(df, classifier=0):
     """
-    Only two best classifiers have been employed on these datasets
+    Treina modelo para tráfego UDP e exibe métricas de avaliação.
     """
-    udp_df = df[df.loc[:,"protocol_type"] == "udp"]
-    
-    service_values = np.unique(udp_df.loc[:,"service"])
-    mid = (len(service_values)+1)/2
+    udp_df = df[df["protocol_type"] == "udp"]
+
+    # Limpa espaços e pontos finais dos rótulos e coloca em minúsculas
+    udp_df["result"] = udp_df["result"].str.strip().str.lower().str.replace(".", "", regex=False)
+
+    # Mostra a nova distribuição
+    print("Distribuição limpa dos rótulos:")
+    print(udp_df["result"].value_counts())
+
+    # Binariza: normal = 1 (benigno), outros = 0 (ataque)
+    udp_df["result"] = udp_df["result"].apply(lambda x: 1 if x == "normal" else 0)
+
+    # Codifica o campo 'service'
+    service_values = np.unique(udp_df["service"])
+    mid = (len(service_values) + 1) / 2
     for i in range(len(service_values)):
-        udp_df = udp_df.replace(service_values[i], (i-mid)/10)
-    
-    udp_features = ["dst_bytes","service","src_bytes","dst_host_srv_count","count"]
+        udp_df = udp_df.replace(service_values[i], (i - mid) / 10)
+
+    # Simula a taxa de pacotes por segundo
+    # Suponha que cada pacote representa uma amostra a cada 0.1s => 10 pacotes/seg
+    udp_df["taxa"] = udp_df["count"] / 10
+
+    udp_features = ["dst_bytes", "service", "src_bytes", "dst_host_srv_count", "taxa"]
     udp_target = "result"
     
-    X = udp_df.loc[:,udp_features]
-    y = udp_df.loc[:,udp_target]
-    classes = np.unique(y)
-    for i in range(len(classes)):
-        if i == 2:
-            udp_df = udp_df.replace(classes[i], 0)
-        else:
-            udp_df = udp_df.replace(classes[i], 1)
-    
-    #turning the service attribute to categorical values
-    #icmp_df=icmp_df.replace("eco_i",-0.1)
-    #icmp_df=icmp_df.replace("ecr_i",0.0)
-    #icmp_df=icmp_df.replace("tim_i",0.1)
-    #icmp_df=icmp_df.replace("urp_i",0.2)
-    
-    y = udp_df.loc[:,udp_target] #updating the y variables
-    print("Data preprocessing done.")
-    
-    #choose KNN if classifier == 0 else choose Decision Tree
+    X = udp_df[udp_features]
+    y = udp_df[udp_target]
+
+    print("✅ Pré-processamento concluído.")
+
+    # Divide dados para avaliação
+    X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=0.3, random_state=42)
+
+    # Seleciona o classificador
     if str(classifier) == "0":
-        k = 3
-        model = KNeighborsClassifier(n_neighbors=k)
+        model = KNeighborsClassifier(n_neighbors=3)
+        print("🔧 Modelo: KNN (k=3)")
     elif str(classifier) == "1":
         from sklearn.tree import DecisionTreeClassifier
         model = DecisionTreeClassifier()
+        print("🔧 Modelo: Decision Tree")
     else:
-        print("Wrong model chosen! Placing default model 0 to model training!")
-        k = 3
-        model = KNeighborsClassifier(n_neighbors=k)
-    
-    
-    #fitting our model
-    model.fit(X,y)
-    print("The model has been fit.")
-    
-    print("Save the fitted model?(y/n):")
-    choice = input().lower()
-    if choice == "y":
-        pickle.dump(model, open("./modelo/udp_data.sav", 'wb'))
+        print("⚠️ Modelo inválido. Usando KNN por padrão.")
+        model = KNeighborsClassifier(n_neighbors=3)
 
+    # Treina modelo
+    model.fit(X_train, y_train)
+    print("✅ Modelo treinado com sucesso.")
+
+    # Avaliação
+    y_pred = model.predict(X_test)
+    print("\n--- 📊 MÉTRICAS DE AVALIAÇÃO ---")
+    print(confusion_matrix(y_test, y_pred))
+    print(classification_report(y_test, y_pred, digits=4))
+
+    # Salva modelo se desejado
+    print("💾 Deseja salvar o modelo? (y/n):")
+    choice = input().strip().lower()
+    if choice == "y":
+        pickle.dump(model, open("./udp-server/udp_data.sav", 'wb'))
+        print("✅ Modelo salvo em './udp-server/udp_data.sav'.")
+
+# Executa
 train_udp(df)

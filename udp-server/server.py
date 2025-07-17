@@ -3,6 +3,8 @@ import socket
 from datetime import datetime
 import pickle
 import pandas as pd
+import time
+from collections import deque
 
 # Carrega modelo treinado
 modelo = pickle.load(open("udp_data.sav", "rb"))
@@ -12,42 +14,45 @@ sock.bind(("0.0.0.0", 12345))
 
 print("Servidor escutando na porta 12345...")
 
-# Inicialização de contadores simples (ajuste conforme necessidade)
-contador_total = 0
+# Inicialização
 contador_por_ip = {}
+janela = deque()
+tempo_janela = 2  # segundos
 
 while True:
     data, addr = sock.recvfrom(4096)
-    agora = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+    agora = time.time()
+    horario = datetime.now().strftime("%H:%M:%S.%f")[:-3]
     tam = len(data)
 
     try:
         msg = data.decode()
-        # Detecta o IP de origem real do payload, se você embutir no payload (ex: "Hello|10.0.0.101")
         partes = msg.split("|")
         if len(partes) == 2:
             msg, ip_origem = partes[0], partes[1]
         else:
-            ip_origem = addr[0]  # fallback
-        contador_total += 1
+            ip_origem = addr[0]
         contador_por_ip[ip_origem] = contador_por_ip.get(ip_origem, 0) + 1
 
-        # Simula extração de features reais (substitua por análise de payload real)
+        # Atualiza janela de tempo
+        janela.append(agora)
+        while janela and janela[0] < agora - tempo_janela:
+            janela.popleft()
+        taxa_pacotes = len(janela)
+
         amostra = {
             "dst_bytes": tam,
-            "service": 0.1,  # você pode usar um map de serviços reais (e.g. DNS, NTP)
+            "service": 0.1,
             "src_bytes": len(msg.encode()),
             "dst_host_srv_count": contador_por_ip[ip_origem],
-            "count": contador_total
+            "taxa": taxa_pacotes  # agora representa a taxa
         }
-
 
         entrada_modelo = pd.DataFrame([amostra])
         predicao = modelo.predict(entrada_modelo)[0]
-        
+
         label = "🟢 BENIGNO" if predicao == 1 else "🔴 ATAQUE"
-        print(f"[{agora}] {label} | {ip_origem}:{addr[1]} → \"{msg}\" ({tam} bytes)")
+        print(f"[{horario}] {label} | {ip_origem}:{addr[1]} → \"{msg}\" ({tam} bytes)")
 
     except UnicodeDecodeError:
-        # Pacote com dados binários – possível ataque
-        print(f"[{agora}] 🔴 ATAQUE? | {ip_origem}:{addr[1]} → [BINÁRIO] ({tam} bytes)")
+        print(f"[{horario}] 🔴 ATAQUE? | {ip_origem}:{addr[1]} → [BINÁRIO] ({tam} bytes)")
