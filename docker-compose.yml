@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  server:
+    build:
+      context: ./udp-server
+      dockerfile: Dockerfile
+    container_name: server
+    networks:
+      - udpnet
+
+  attacker:
+    build:
+      context: ./udp-client
+      dockerfile: Dockerfile.attacker
+    container_name: attacker
+    networks:
+      - udpnet
+
+  benign:
+    build:
+      context: ./udp-client
+      dockerfile: Dockerfile
+    container_name: benign-client
+    networks:
+      - udpnet
+
+networks:
+  udpnet:
+    driver: bridge

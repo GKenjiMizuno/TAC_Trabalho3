@@ -1,0 +1,10 @@
+FROM debian:bullseye-slim
+
+RUN apt-get update && apt-get install -y hping3 iputils-ping
+
+WORKDIR /app
+COPY ataque_udp.sh /app/ataque_udp.sh
+
+RUN chmod +x /app/ataque_udp.sh
+
+CMD ["/app/ataque_udp.sh"]
